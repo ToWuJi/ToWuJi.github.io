@@ -254,15 +254,16 @@ ${orderDetail}
 下单时间：${new Date().toLocaleString()}
     `;
     fetch("https://wxpusher.zjiecode.com/api/send/message",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-            appToken:appToken,
-            content:pushContent,
-            contentType:1,
-            uIds:[uId]
-        })
-    }).then(res=>res.json()).then(res=>{
+    method:"POST",
+    mode: 'no-cors',
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+        appToken:appToken,
+        content:pushContent,
+        contentType:1,
+        uIds:[uId]
+    })
+}).then(res=>res.json()).then(res=>{
         if(res.code===0){
             alert("🎉 订单提交成功，商家已接单！");
             cart = {};
