@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1,user-scalable=no">
+    <title>伍季O.ooooo - 在线点餐</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC",Microsoft Yahei,sans-serif;}
+        body{background:#f8f9fa;padding-bottom:180px;}
+        .header{background:linear-gradient(135deg,#2c2c2c,#404040);padding:22px 15px;border-radius:0 0 22px 22px;color:#fff;text-align:center;}
+        .header h2{font-size:25px;font-weight:600;letter-spacing:2px;}
+        .header p{font-size:13px;margin-top:6px;opacity:0.9;}
+        .cate-nav{display:flex;background:#fff;margin:12px;border-radius:18px;overflow:hidden;box-shadow:0 2px 10px #eee;}
+        .cate-nav span{flex:1;text-align:center;padding:14px 0;font-size:14px;color:#666;transition:all 0.3s ease;}
+        .cate-nav span.active{background:#2c2c2c;color:#fff;font-weight:500;}
+        .food-card{background:#fff;margin:10px 12px;padding:15px;border-radius:18px;display:flex;align-items:center;box-shadow:0 4px 12px #eaeaea;}
+        .food-img{width:82px;height:82px;border-radius:14px;object-fit:cover;margin-right:15px;}
+        .food-info{flex:1;}
+        .food-name{font-size:16px;color:#222;font-weight:500;}
+        .food-desc{font-size:12px;color:#999;margin:5px 0;}
+        .food-price{font-size:17px;color:#c8161d;font-weight:bold;}
+        .num-group{display:flex;align-items:center;gap:12px;}
+        .sub-btn,.add-btn{width:34px;height:34px;border-radius:50%;border:none;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+        .sub-btn{background:#f1f1f1;color:#888;}
+        .add-btn{background:#2c2c2c;color:#fff;box-shadow:0 2px 6px #ddd;}
+        .num-text{font-size:15px;width:32px;text-align:center;color:#333;}
+        .info-box{margin:12px;background:#fff;padding:16px;border-radius:18px;box-shadow:0 4px 12px #eaeaea;}
+        .info-title{font-size:15px;color:#333;margin-bottom:12px;font-weight:500;}
+        .info-box input{width:100%;height:46px;padding:0 14px;border:1px solid #eee;border-radius:12px;margin-bottom:12px;font-size:14px;outline:none;background:#fafafa;}
+        .fixed-bottom{position:fixed;left:0;bottom:0;width:100%;background:#fff;padding:16px 20px;box-shadow:0 -4px 15px #eee;border-radius:22px 22px 0 0;}
+        .total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+        .total-text{font-size:15px;color:#555;}
+        .total-money{font-size:21px;color:#c8161d;font-weight:bold;}
+        .order-btn{width:100%;height:50px;background:#2c2c2c;border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:500;cursor:pointer;}
+        .order-tips{text-align:center;font-size:12px;color:#aaa;margin-top:8px;}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>伍季O.ooooo</h2>
+        <p>匠心烹制 · 新鲜现做 · 一键轻松下单</p>
+    </div>
+
+    <div class="cate-nav">
+        <span class="active" data-type="all">全部</span>
+        <span data-type="hot">热菜</span>
+        <span data-type="cold">凉菜</span>
+        <span data-type="zhu">主食</span>
+        <span data-type="yin">饮品</span>
+    </div>
+
+    <div id="foodList"></div>
+
+    <div class="info-box">
+        <div class="info-title">用餐信息填写</div>
+        <input type="text" id="tableNum" placeholder="请输入桌号 / 用餐位置">
+        <input type="text" id="userPhone" placeholder="联系电话（选填）">
+        <input type="text" id="userRemark" placeholder="口味偏好、忌口、其他备注">
+    </div>
+
+    <div class="fixed-bottom">
+        <div class="total-row">
+            <div class="total-text">已选商品</div>
+            <div class="total-money">合计：¥<span id="allTotal">0</span></div>
+        </div>
+        <button class="order-btn" onclick="submitOrder()">立即提交订单</button>
+        <div class="order-tips">提交成功后商家即刻收到订单</div>
+    </div>
+
+<script>
+let foodData = [
+    // 你指定的5道菜（新稳定图）
+    {
+        name:"红烧排骨",
+        desc:"色泽红亮，软烂入味，酱香浓郁",
+        price:42,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1544025162-d76694265947?w=500&q=80"
+    },
+    {
+        name:"糖醋虾仁",
+        desc:"外酥里嫩，酸甜适口，老少皆宜",
+        price:46,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1565192259022-0427b058f372?w=500&q=80"
+    },
+    {
+        name:"红烧鸡翅",
+        desc:"肉质鲜嫩，入味十足，下饭神器",
+        price:35,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1527477396000-e27163b481c2?w=500&q=80"
+    },
+    {
+        name:"蚝油生菜",
+        desc:"清爽解腻，鲜香可口，低脂健康",
+        price:16,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=500&q=80"
+    },
+    {
+        name:"西红柿炖牛腩",
+        desc:"汤汁浓郁，牛腩软烂，酸甜开胃",
+        price:52,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1585032226651-759b368d7246?w=500&q=80"
+    },
+    // 原有菜品（也换稳定图）
+    {
+        name:"波士顿龙虾拼果木牛排",
+        desc:"豪华双拼，约会聚餐首选",
+        price:268,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1558030006-45062174f9b6?w=500&q=80"
+    },
+    {
+        name:"鲜虾鸡里蹦",
+        desc:"虾仁搭配鸡丁，鲜嫩弹牙",
+        price:58,
+        type:"hot",
+        img:"https://images.unsplash.com/photo-1598517511295-c216a156a3eb?w=500&q=80"
+    },
+    {
+        name:"爽口凉拌木耳",
+        desc:"开胃解腻，脆爽口感",
+        price:18,
+        type:"cold",
+        img:"https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=500&q=80"
+    },
+    {
+        name:"青瓜蛰头",
+        desc:"清爽下酒，口感层次丰富",
+        price:22,
+        type:"cold",
+        img:"https://images.unsplash.com/photo-1567620905732-2d1ec7ab745?w=500&q=80"
+    },
+    {
+        name:"香喷喷米饭",
+        desc:"优质东北大米，粒粒饱满",
+        price:3,
+        type:"zhu",
+        img:"https://images.unsplash.com/photo-1516684738-7b419b46c6a2?w=500&q=80"
+    },
+    {
+        name:"牛肉炒饭",
+        desc:"足量牛肉，锅气十足",
+        price:28,
+        type:"zhu",
+        img:"https://images.unsplash.com/photo-1603133818839-1fec147f53f7?w=500&q=80"
+    },
+    {
+        name:"手打柠檬红茶",
+        desc:"酸甜清爽，解腻百搭",
+        price:18,
+        type:"yin",
+        img:"https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=500&q=80"
+    },
+    {
+        name:"珍珠奶茶",
+        desc:"醇香奶茶，Q弹珍珠",
+        price:16,
+        type:"yin",
+        img:"https://images.unsplash.com/photo-1575224300306-1b8da36134ec?w=500&q=80"
+    }
+];
+
+let cart = {};
+let nowType = "all";
+
+// WxPusher 密钥
+let appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
+let uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
+
+function renderFood(){
+    let html = "";
+    let filterList = nowType === "all" ? foodData : foodData.filter(item=>item.type === nowType);
+    filterList.forEach(item=>{
+        let count = cart[item.name] || 0;
+        html += `
+        <div class="food-card">
+            <img class="food-img" src="${item.img}" alt="${item.name}">
+            <div class="food-info">
+                <div class="food-name">${item.name}</div>
+                <div class="food-desc">${item.desc}</div>
+                <div class="food-price">¥${item.price}</div>
+            </div>
+            <div class="num-group">
+                <button class="sub-btn" onclick="cutFoodNum('${item.name}')">-</button>
+                <span class="num-text">${count}</span>
+                <button class="add-btn" onclick="addFoodNum('${item.name}')">+</button>
+            </div>
+        </div>
+        `
+    })
+    document.getElementById("foodList").innerHTML = html;
+    calcTotalPrice();
+}
+
+function addFoodNum(name){
+    cart[name] = (cart[name] || 0) + 1;
+    renderFood();
+}
+function cutFoodNum(name){
+    if(cart[name] > 0) cart[name]--;
+    renderFood();
+}
+
+function calcTotalPrice(){
+    let total = 0;
+    for(let name in cart){
+        if(cart[name] > 0){
+            let food = foodData.find(v=>v.name === name);
+            total += food.price * cart[name];
+        }
+    }
+    document.getElementById("allTotal").innerText = total;
+    return total;
+}
+
+document.querySelectorAll(".cate-nav span").forEach(tab=>{
+    tab.onclick = function(){
+        document.querySelectorAll(".cate-nav span").forEach(i=>i.classList.remove("active"));
+        this.classList.add("active");
+        nowType = this.dataset.type;
+        renderFood();
+    }
+})
+
+function submitOrder(){
+    let totalPrice = calcTotalPrice();
+    if(totalPrice <= 0){
+        alert("请先挑选心仪菜品再下单~");
+        return;
+    }
+    let table = document.getElementById("tableNum").value || "无填写";
+    let phone = document.getElementById("userPhone").value || "无填写";
+    let remark = document.getElementById("userRemark").value || "无备注";
+    let orderDetail = "";
+    for(let name in cart){
+        if(cart[name]>0){
+            let f = foodData.find(v=>v.name===name);
+            orderDetail += `${name} ×${cart[name]} 单价${f.price}元\n`;
+        }
+    }
+    let pushTitle = "🔔 伍季O.ooooo 新订单通知";
+    let pushContent = `
+桌号位置：${table}
+联系电话：${phone}
+顾客备注：${remark}
+——————————
+点餐清单：
+${orderDetail}
+订单总价：${totalPrice} 元
+下单时间：${new Date().toLocaleString()}
+    `;
+    fetch("https://wxpusher.zjiecode.com/api/send/message",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            appToken:appToken,
+            content:pushContent,
+            contentType:1,
+            uIds:[uId]
+        })
+    }).then(res=>res.json()).then(res=>{
+        if(res.code===0){
+            alert("🎉 订单提交成功，商家已接单！");
+            cart = {};
+            renderFood();
+            document.getElementById("tableNum").value = "";
+            document.getElementById("userPhone").value = "";
+            document.getElementById("userRemark").value = "";
+        }else{
+            alert("订单提交失败，请稍后重试");
+        }
+    }).catch(()=>{
+        alert("网络异常，请检查网络后重试");
+    })
+}
+
+renderFood();
+</script>
+</body>
+</html>
