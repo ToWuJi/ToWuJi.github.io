@@ -6,7 +6,8 @@
     <title>伍季O.ooooo - 在线点餐</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC",Microsoft Yahei,sans-serif;}
-        body{background:#f8f9fa;padding-bottom:180px;}
+        body{background:#f8f9fa;padding-bottom:220px;}
+        /* 点餐页面样式 */
         .header{background:linear-gradient(135deg,#2c2c2c,#404040);padding:22px 15px;border-radius:0 0 22px 22px;color:#fff;text-align:center;}
         .header h2{font-size:25px;font-weight:600;letter-spacing:2px;}
         .header p{font-size:13px;margin-top:6px;opacity:0.9;}
@@ -27,19 +28,36 @@
         .info-box{margin:12px;background:#fff;padding:16px;border-radius:18px;box-shadow:0 4px 12px #eaeaea;}
         .info-title{font-size:15px;color:#333;margin-bottom:12px;font-weight:500;}
         .info-box input{width:100%;height:46px;padding:0 14px;border:1px solid #eee;border-radius:12px;margin-bottom:12px;font-size:14px;outline:none;background:#fafafa;}
-        .fixed-bottom{position:fixed;left:0;bottom:0;width:100%;background:#fff;padding:16px 20px;box-shadow:0 -4px 15px #eee;border-radius:22px 22px 0 0;}
+        .fixed-bottom{position:fixed;left:0;bottom:0;width:100%;background:#fff;padding:16px 20px;box-shadow:0 -4px 15px #eee;border-radius:22px 22px 0 0;z-index:10;}
         .total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
         .total-text{font-size:15px;color:#555;}
         .total-money{font-size:21px;color:#c8161d;font-weight:bold;}
         .order-btn{width:100%;height:50px;background:#2c2c2c;border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:500;cursor:pointer;}
         .order-tips{text-align:center;font-size:12px;color:#aaa;margin-top:8px;}
+        .open-admin{margin:12px;width:calc(100% - 24px);height:44px;background:#0066cc;border:none;border-radius:12px;color:#fff;font-size:14px;cursor:pointer;}
+        /* 管理面板弹窗 */
+        .admin-mask{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99;display:none;padding:15px;overflow-y:auto;}
+        .admin-box{background:#fff;border-radius:16px;padding:18px;max-width:700px;margin:0 auto;}
+        .admin-close{width:100%;height:44px;background:#999;border:none;border-radius:10px;color:#fff;margin-bottom:16px;cursor:pointer;}
+        .form-item{margin-bottom:12px;}
+        label{display:block;margin-bottom:6px;font-weight:500;color:#333;}
+        .admin-box input,.admin-box select{width:100%;height:44px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
+        .admin-btn{width:100%;height:46px;background:#2c2c2c;color:#fff;border:none;border-radius:10px;font-size:16px;margin-top:8px;cursor:pointer;}
+        .sync-btn{background:#009944;}
+        .del-btn{background:#d81e06;width:70px;height:36px;font-size:13px;border:none;border-radius:6px;color:#fff;cursor:pointer;}
+        .food-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;gap:10px;}
+        .food-img-sm{width:60px;height:60px;border-radius:8px;object-fit:cover;}
+        .tip{font-size:12px;color:#888;margin-top:8px;text-align:center;line-height:1.6;}
+        .status{color:#009944;text-align:center;margin:10px 0;font-weight:500;}
     </style>
 </head>
 <body>
+    <!-- 点餐主界面 -->
     <div class="header">
         <h2>伍季O.ooooo</h2>
         <p>匠心烹制 · 新鲜现做 · 一键轻松下单</p>
     </div>
+
     <div class="cate-nav">
         <span class="active" data-type="all">全部</span>
         <span data-type="hot">热菜</span>
@@ -47,13 +65,18 @@
         <span data-type="zhu">主食</span>
         <span data-type="yin">饮品</span>
     </div>
+
     <div id="foodList"></div>
+
+    <button class="open-admin" onclick="showAdmin()">进入菜品管理（商家专用）</button>
+
     <div class="info-box">
         <div class="info-title">用餐信息填写</div>
         <input type="text" id="tableNum" placeholder="请输入桌号 / 用餐位置">
         <input type="text" id="userPhone" placeholder="联系电话（选填）">
         <input type="text" id="userRemark" placeholder="口味偏好、忌口、其他备注">
     </div>
+
     <div class="fixed-bottom">
         <div class="total-row">
             <div class="total-text">已选商品</div>
@@ -62,20 +85,78 @@
         <button class="order-btn" onclick="submitOrder()">立即提交订单</button>
         <div class="order-tips">提交成功后商家即刻收到订单</div>
     </div>
+
+    <!-- 内嵌菜品管理弹窗 -->
+    <div class="admin-mask" id="adminMask">
+        <div class="admin-box">
+            <button class="admin-close" onclick="hideAdmin()">关闭管理面板</button>
+            <h2 style="text-align:center;margin-bottom:16px;">菜品管理后台</h2>
+            <div class="status" id="syncStatus">自动连接云端</div>
+
+            <div class="form-item">
+                <label>菜品图片链接</label>
+                <input id="imgUrl" placeholder="粘贴国内图片网络地址">
+            </div>
+            <div class="form-item">
+                <label>菜品名称</label>
+                <input id="foodName" placeholder="例：红烧排骨">
+            </div>
+            <div class="form-item">
+                <label>菜品简介</label>
+                <input id="foodDesc" placeholder="简短描述菜品">
+            </div>
+            <div class="form-item">
+                <label>菜品价格</label>
+                <input type="number" id="foodPrice" placeholder="数字，例：42">
+            </div>
+            <div class="form-item">
+                <label>菜品分类</label>
+                <select id="foodType">
+                    <option value="hot">热菜</option>
+                    <option value="cold">凉菜</option>
+                    <option value="zhu">主食</option>
+                    <option value="yin">饮品</option>
+                </select>
+            </div>
+            <button class="admin-btn" onclick="addFood()">添加菜品</button>
+
+            <h3 style="margin:20px 0 10px;">全部菜品列表</h3>
+            <div id="foodListBox"></div>
+            <button class="admin-btn sync-btn" onclick="autoSyncGit()">一键同步到GitHub</button>
+            <div class="tip">同步后顾客刷新页面即可看到最新菜单</div>
+        </div>
+    </div>
+
 <script>
+// ==================== 全局配置 ====================
+const appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
+const uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
+const GIT_OWNER = "ToWuJi";
+const GIT_REPO = "ToWuJi.github.io";
+const GIT_FILE_PATH = "food.json";
+const GIT_BRANCH = "main";
+const GIT_TOKEN = "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";
+
 let foodData = [];
 let cart = {};
 let nowType = "all";
-const appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
-const uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
+let fileSha = "";
 
-// 每次打开页面从云端JSON拉取菜品，所有设备同步
+// ==================== 弹窗控制 ====================
+function showAdmin(){
+    document.getElementById("adminMask").style.display = "block";
+    loadRemoteFood();
+}
+function hideAdmin(){
+    document.getElementById("adminMask").style.display = "none";
+}
+
+// ==================== 点餐页面渲染 ====================
 async function loadCloudFood(){
     const res = await fetch("./food.json");
     foodData = await res.json();
     renderFood();
 }
-
 function renderFood(){
     let html = "";
     let filterList = nowType === "all" ? foodData : foodData.filter(item=>item.type === nowType);
@@ -122,6 +203,8 @@ document.querySelectorAll(".cate-nav span").forEach(tab=>{
         nowType = this.dataset.type; renderFood();
     }
 });
+
+// ==================== 订单提交 ====================
 function submitOrder(){
     let total = calcTotalPrice();
     if(total <= 0){alert("请先挑选心仪菜品再下单~");return;}
@@ -148,6 +231,111 @@ function submitOrder(){
         document.getElementById("userRemark").value = "";
     })
 }
+
+// ==================== 内嵌管理面板逻辑 ====================
+async function loadRemoteFood(){
+    setStatus("正在加载云端菜品...");
+    try{
+        const res = await fetch(`https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${GIT_FILE_PATH}?ref=${GIT_BRANCH}`,{
+            headers: {Authorization: `token ${GIT_TOKEN}`}
+        })
+        const data = await res.json();
+        if(data.content){
+            fileSha = data.sha;
+            const rawJson = atob(data.content);
+            foodData = JSON.parse(rawJson);
+            renderAdmin();
+            renderFood();
+            setStatus("菜品加载完成，可以编辑");
+        }else{
+            setStatus("文件读取失败", "#f00");
+        }
+    }catch(err){
+        setStatus("加载失败："+err.message, "#f00");
+    }
+}
+async function autoSyncGit(){
+    if(!fileSha){
+        await loadRemoteFood();
+        if(!fileSha) return;
+    }
+    setStatus("正在同步至GitHub云端...");
+    const jsonStr = JSON.stringify(foodData, null, 4);
+    const base64Content = btoa(unescape(encodeURIComponent(jsonStr)));
+    const body = {
+        message: "自动更新菜品库",
+        content: base64Content,
+        sha: fileSha,
+        branch: GIT_BRANCH
+    }
+    try{
+        const res = await fetch(`https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${GIT_FILE_PATH}`,{
+            method: "PUT",
+            headers: {
+                Authorization: `token ${GIT_TOKEN}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(body)
+        })
+        const result = await res.json();
+        if(result.commit){
+            fileSha = result.content.sha;
+            setStatus("✅ 同步成功！顾客刷新页面即可更新菜单");
+            renderFood();
+        }else{
+            setStatus("同步失败："+JSON.stringify(result), "#f00");
+        }
+    }catch(err){
+        setStatus("同步异常："+err.message, "#f00");
+    }
+}
+function addFood(){
+    const img = document.getElementById("imgUrl").value.trim();
+    const name = document.getElementById("foodName").value.trim();
+    const desc = document.getElementById("foodDesc").value.trim();
+    const price = Number(document.getElementById("foodPrice").value);
+    const type = document.getElementById("foodType").value;
+    if(!img||!name||!desc||!price){
+        alert("图片链接、菜名、简介、价格不能为空");
+        return;
+    }
+    foodData.push({img,name,desc,price,type});
+    document.getElementById("imgUrl").value = "";
+    document.getElementById("foodName").value = "";
+    document.getElementById("foodDesc").value = "";
+    document.getElementById("foodPrice").value = "";
+    renderAdmin();
+    renderFood();
+    setStatus("菜品添加成功，点击一键同步上传云端");
+}
+function delFood(index){
+    if(!confirm("确定删除该菜品？")) return;
+    foodData.splice(index,1);
+    renderAdmin();
+    renderFood();
+    setStatus("已删除，点击一键同步更新云端");
+}
+function renderAdmin(){
+    let html = "";
+    foodData.forEach((item,idx)=>{
+        html += `<div class="food-item">
+            <img class="food-img-sm" src="${item.img}">
+            <div style="flex:1">
+                <div>${item.name} ¥${item.price}</div>
+                <div style="font-size:12px;color:#777">${item.desc}</div>
+            </div>
+            <button class="del-btn" onclick="delFood(${idx})">删除</button>
+        </div>`;
+    })
+    document.getElementById("foodListBox").innerHTML = html || "<p style='text-align:center;color:#999'>暂无菜品</p>";
+}
+function setStatus(text, color="#009944"){
+    const el = document.getElementById("syncStatus");
+    el.innerText = text;
+    el.style.color = color;
+}
+
+// 页面初始化
 loadCloudFood();
 </script>
 </body>
