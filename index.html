@@ -35,15 +35,16 @@
         .order-btn{width:100%;height:50px;background:#2c2c2c;border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:500;cursor:pointer;}
         .order-tips{text-align:center;font-size:12px;color:#aaa;margin-top:8px;}
         .open-admin{margin:12px;width:calc(100% - 24px);height:44px;background:#0066cc;border:none;border-radius:12px;color:#fff;font-size:14px;cursor:pointer;}
-        /* 管理面板弹窗 */
+        /* 管理弹窗 */
         .admin-mask{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99;display:none;padding:15px;overflow-y:auto;}
         .admin-box{background:#fff;border-radius:16px;padding:18px;max-width:700px;margin:0 auto;}
         .admin-close{width:100%;height:44px;background:#999;border:none;border-radius:10px;color:#fff;margin-bottom:16px;cursor:pointer;}
         .form-item{margin-bottom:12px;}
         label{display:block;margin-bottom:6px;font-weight:500;color:#333;}
         .admin-box input,.admin-box select{width:100%;height:44px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
+        textarea{width:100%;min-height:120px;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
         .admin-btn{width:100%;height:46px;background:#2c2c2c;color:#fff;border:none;border-radius:10px;font-size:16px;margin-top:8px;cursor:pointer;}
-        .sync-btn{background:#009944;}
+        .copy-btn{background:#009944;}
         .del-btn{background:#d81e06;width:70px;height:36px;font-size:13px;border:none;border-radius:6px;color:#fff;cursor:pointer;}
         .food-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;gap:10px;}
         .food-img-sm{width:60px;height:60px;border-radius:8px;object-fit:cover;}
@@ -86,12 +87,12 @@
         <div class="order-tips">提交成功后商家即刻收到订单</div>
     </div>
 
-    <!-- 内嵌菜品管理弹窗 -->
+    <!-- 菜品管理弹窗 -->
     <div class="admin-mask" id="adminMask">
         <div class="admin-box">
             <button class="admin-close" onclick="hideAdmin()">关闭管理面板</button>
             <h2 style="text-align:center;margin-bottom:16px;">菜品管理后台</h2>
-            <div class="status" id="syncStatus">自动连接云端</div>
+            <div class="status" id="syncStatus">加载本地缓存菜品</div>
 
             <div class="form-item">
                 <label>菜品图片链接</label>
@@ -122,41 +123,56 @@
 
             <h3 style="margin:20px 0 10px;">全部菜品列表</h3>
             <div id="foodListBox"></div>
-            <button class="admin-btn sync-btn" onclick="autoSyncGit()">一键同步到GitHub</button>
-            <div class="tip">同步后顾客刷新页面即可看到最新菜单</div>
+
+            <button class="admin-btn copy-btn" onclick="copyJson()">导出JSON（复制去更新food.json）</button>
+            <textarea id="jsonOutput" readonly placeholder="导出的菜品JSON会显示在这里"></textarea>
+            <div class="tip">操作步骤：复制文本 → 打开仓库food.json编辑替换 → 保存，顾客刷新页面更新菜单</div>
         </div>
     </div>
 
 <script>
-// ==================== 全局配置 ====================
+// WxPusher配置不变
 const appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
 const uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
-const GIT_OWNER = "ToWuJi";
-const GIT_REPO = "ToWuJi.github.io";
-const GIT_FILE_PATH = "food.json";
-const GIT_BRANCH = "main";
-const GIT_TOKEN = "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";
-
 let foodData = [];
 let cart = {};
 let nowType = "all";
-let fileSha = "";
 
-// ==================== 弹窗控制 ====================
+// 页面初始化：优先读取本地缓存，无缓存则加载线上food.json
+async function initLoad(){
+    let local = localStorage.getItem("wujiMenu");
+    if(local){
+        foodData = JSON.parse(local);
+        setStatus("读取本地缓存菜品成功");
+    }else{
+        try{
+            const res = await fetch("./food.json");
+            foodData = await res.json();
+            localStorage.setItem("wujiMenu",JSON.stringify(foodData));
+            setStatus("从云端加载初始菜品完成");
+        }catch(e){
+            setStatus("云端文件加载失败，请手动导出JSON同步", "#f00");
+            // 兜底默认菜品
+            foodData = [
+                {"name":"红烧排骨","desc":"色泽红亮，软烂入味，酱香浓郁","price":42,"type":"hot","img":"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
+                {"name":"糖醋虾仁","desc":"外酥里嫩，酸甜适口，老少皆宜","price":46,"type":"hot","img":"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
+                {"name":"红烧鸡翅","desc":"肉质鲜嫩，入味十足，下饭神器","price":35,"type":"hot","img":"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"}
+            ];
+        }
+    }
+    renderFood();
+    renderAdmin();
+}
+
+// 弹窗开关
 function showAdmin(){
     document.getElementById("adminMask").style.display = "block";
-    loadRemoteFood();
 }
 function hideAdmin(){
     document.getElementById("adminMask").style.display = "none";
 }
 
-// ==================== 点餐页面渲染 ====================
-async function loadCloudFood(){
-    const res = await fetch("./food.json");
-    foodData = await res.json();
-    renderFood();
-}
+// 点餐页面渲染
 function renderFood(){
     let html = "";
     let filterList = nowType === "all" ? foodData : foodData.filter(item=>item.type === nowType);
@@ -179,12 +195,16 @@ function renderFood(){
     document.getElementById("foodList").innerHTML = html;
     calcTotalPrice();
 }
+
+// 加减份数
 function addFoodNum(name){
     cart[name] = (cart[name]||0)+1; renderFood();
 }
 function cutFoodNum(name){
     if(cart[name]>0) cart[name]--; renderFood();
 }
+
+// 计算总价
 function calcTotalPrice(){
     let total=0;
     for(let name in cart){
@@ -196,6 +216,8 @@ function calcTotalPrice(){
     document.getElementById("allTotal").innerText = total;
     return total;
 }
+
+// 分类切换
 document.querySelectorAll(".cate-nav span").forEach(tab=>{
     tab.onclick = function(){
         document.querySelectorAll(".cate-nav span").forEach(i=>i.classList.remove("active"));
@@ -204,7 +226,7 @@ document.querySelectorAll(".cate-nav span").forEach(tab=>{
     }
 });
 
-// ==================== 订单提交 ====================
+// 订单提交（GET跨域兼容，不会下单失败）
 function submitOrder(){
     let total = calcTotalPrice();
     if(total <= 0){alert("请先挑选心仪菜品再下单~");return;}
@@ -232,63 +254,8 @@ function submitOrder(){
     })
 }
 
-// ==================== 内嵌管理面板逻辑 ====================
-async function loadRemoteFood(){
-    setStatus("正在加载云端菜品...");
-    try{
-        const res = await fetch(`https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${GIT_FILE_PATH}?ref=${GIT_BRANCH}`,{
-            headers: {Authorization: `token ${GIT_TOKEN}`}
-        })
-        const data = await res.json();
-        if(data.content){
-            fileSha = data.sha;
-            const rawJson = atob(data.content);
-            foodData = JSON.parse(rawJson);
-            renderAdmin();
-            renderFood();
-            setStatus("菜品加载完成，可以编辑");
-        }else{
-            setStatus("文件读取失败", "#f00");
-        }
-    }catch(err){
-        setStatus("加载失败："+err.message, "#f00");
-    }
-}
-async function autoSyncGit(){
-    if(!fileSha){
-        await loadRemoteFood();
-        if(!fileSha) return;
-    }
-    setStatus("正在同步至GitHub云端...");
-    const jsonStr = JSON.stringify(foodData, null, 4);
-    const base64Content = btoa(unescape(encodeURIComponent(jsonStr)));
-    const body = {
-        message: "自动更新菜品库",
-        content: base64Content,
-        sha: fileSha,
-        branch: GIT_BRANCH
-    }
-    try{
-        const res = await fetch(`https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${GIT_FILE_PATH}`,{
-            method: "PUT",
-            headers: {
-                Authorization: `token ${GIT_TOKEN}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(body)
-        })
-        const result = await res.json();
-        if(result.commit){
-            fileSha = result.content.sha;
-            setStatus("✅ 同步成功！顾客刷新页面即可更新菜单");
-            renderFood();
-        }else{
-            setStatus("同步失败："+JSON.stringify(result), "#f00");
-        }
-    }catch(err){
-        setStatus("同步异常："+err.message, "#f00");
-    }
-}
+// ========== 管理面板逻辑（无GitHub API，无跨域） ==========
+// 新增菜品
 function addFood(){
     const img = document.getElementById("imgUrl").value.trim();
     const name = document.getElementById("foodName").value.trim();
@@ -300,21 +267,28 @@ function addFood(){
         return;
     }
     foodData.push({img,name,desc,price,type});
+    localStorage.setItem("wujiMenu",JSON.stringify(foodData));
+    // 清空输入框
     document.getElementById("imgUrl").value = "";
     document.getElementById("foodName").value = "";
     document.getElementById("foodDesc").value = "";
     document.getElementById("foodPrice").value = "";
     renderAdmin();
     renderFood();
-    setStatus("菜品添加成功，点击一键同步上传云端");
+    setStatus("菜品添加成功，记得导出JSON同步云端");
 }
+
+// 删除菜品
 function delFood(index){
     if(!confirm("确定删除该菜品？")) return;
     foodData.splice(index,1);
+    localStorage.setItem("wujiMenu",JSON.stringify(foodData));
     renderAdmin();
     renderFood();
-    setStatus("已删除，点击一键同步更新云端");
+    setStatus("已删除，导出JSON同步云端生效");
 }
+
+// 渲染管理列表
 function renderAdmin(){
     let html = "";
     foodData.forEach((item,idx)=>{
@@ -329,14 +303,25 @@ function renderAdmin(){
     })
     document.getElementById("foodListBox").innerHTML = html || "<p style='text-align:center;color:#999'>暂无菜品</p>";
 }
+
+// 导出可同步的JSON文本
+function copyJson(){
+    const jsonStr = JSON.stringify(foodData,null,4);
+    document.getElementById("jsonOutput").value = jsonStr;
+    document.getElementById("jsonOutput").select();
+    document.execCommand("copy");
+    alert("JSON已复制！前往仓库编辑food.json替换保存即可全设备同步");
+}
+
+// 状态文字
 function setStatus(text, color="#009944"){
     const el = document.getElementById("syncStatus");
     el.innerText = text;
     el.style.color = color;
 }
 
-// 页面初始化
-loadCloudFood();
+// 页面加载执行
+initLoad();
 </script>
 </body>
 </html>
