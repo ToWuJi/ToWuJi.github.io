@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -14,10 +13,12 @@
         label{display:block;margin-bottom:6px;font-weight:500;color:#333;}
         input,select{width:100%;height:44px;padding:0 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;}
         button{width:100%;height:46px;background:#2c2c2c;color:#fff;border:none;border-radius:10px;font-size:16px;margin-top:8px;cursor:pointer;}
+        .btn-copy{background:#0088cc;}
         .food-item{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;gap:10px;}
         .food-img{width:60px;height:60px;border-radius:8px;object-fit:cover;}
         .del-btn{background:#d81e06;width:70px;height:36px;font-size:13px;}
-        .tip{font-size:12px;color:#888;margin-top:8px;text-align:center;}
+        .tip{font-size:12px;color:#888;margin-top:8px;text-align:center;line-height:1.6;}
+        textarea{width:100%;min-height:120px;padding:10px;border:1px solid #ddd;border-radius:10px;margin-top:10px;}
     </style>
 </head>
 <body>
@@ -49,16 +50,25 @@
             </select>
         </div>
         <button onclick="addFood()">添加菜品</button>
-        <div class="tip">添加后点餐页面自动同步，数据保存在浏览器本地</div>
+        <div class="tip">新增后点击下方【导出云端JSON】复制文本，去仓库更新food.json，全设备同步</div>
     </div>
 
     <div class="box">
         <h2>全部菜品列表（可删除）</h2>
         <div id="foodListBox"></div>
+        <button class="btn-copy" onclick="copyJson()">导出云端JSON（复制全部文本）</button>
+        <textarea id="jsonOutput" readonly placeholder="导出的JSON会显示在这里"></textarea>
+        <div class="tip">操作步骤：复制文本 → 打开github仓库food.json文件编辑 → 全选替换保存，顾客刷新点餐页即可看到更新</div>
     </div>
 
 <script>
-let foodList = JSON.parse(localStorage.getItem("wujiFood")) || [];
+let foodList = [];
+// 初始化加载云端数据
+async function initLoad(){
+    const res = await fetch("./food.json");
+    foodList = await res.json();
+    renderAdmin();
+}
 // 渲染菜品列表
 function renderAdmin(){
     let html = "";
@@ -86,27 +96,29 @@ function addFood(){
         return;
     }
     foodList.push({img,name,desc,price,type});
-    saveData();
     // 清空输入框
     document.getElementById("imgUrl").value = "";
     document.getElementById("foodName").value = "";
     document.getElementById("foodDesc").value = "";
     document.getElementById("foodPrice").value = "";
-    alert("添加成功，点餐页已同步更新！");
+    alert("添加成功，请导出JSON同步云端");
     renderAdmin();
 }
 // 删除菜品
 function delFood(index){
     if(!confirm("确定删除该菜品？")) return;
     foodList.splice(index,1);
-    saveData();
     renderAdmin();
 }
-// 本地存储
-function saveData(){
-    localStorage.setItem("wujiFood",JSON.stringify(foodList));
+// 导出并复制云端JSON
+function copyJson(){
+    const jsonStr = JSON.stringify(foodList,null,4);
+    document.getElementById("jsonOutput").value = jsonStr;
+    document.getElementById("jsonOutput").select();
+    document.execCommand("copy");
+    alert("JSON已复制！去github替换food.json内容即可全设备同步");
 }
-renderAdmin();
+initLoad();
 </script>
 </body>
 </html>
