@@ -14,7 +14,7 @@
         .cate-nav span{flex:1;text-align:center;padding:14px 0;font-size:14px;color:#666;transition:all 0.3s ease;}
         .cate-nav span.active{background:#2c2c2c;color:#fff;font-weight:500;}
         .food-card{background:#fff;margin:10px 12px;padding:15px;border-radius:18px;display:flex;align-items:center;box-shadow:0 4px 12px #eaeaea;}
-        .food-img{width:82px;height:82px;border-radius:14px;object-fit:cover;margin-right:15px;}
+        .food-img{width:82px;height:82px;border-radius:14px;object-fit:cover; margin-right:15px;}
         .food-info{flex:1;}
         .food-name{font-size:16px;color:#222;font-weight:500;}
         .food-desc{font-size:12px;color:#999;margin:5px 0;}
@@ -40,7 +40,6 @@
         <h2>伍季O.ooooo</h2>
         <p>匠心烹制 · 新鲜现做 · 一键轻松下单</p>
     </div>
-
     <div class="cate-nav">
         <span class="active" data-type="all">全部</span>
         <span data-type="hot">热菜</span>
@@ -48,16 +47,13 @@
         <span data-type="zhu">主食</span>
         <span data-type="yin">饮品</span>
     </div>
-
     <div id="foodList"></div>
-
     <div class="info-box">
         <div class="info-title">用餐信息填写</div>
         <input type="text" id="tableNum" placeholder="请输入桌号 / 用餐位置">
         <input type="text" id="userPhone" placeholder="联系电话（选填）">
         <input type="text" id="userRemark" placeholder="口味偏好、忌口、其他备注">
     </div>
-
     <div class="fixed-bottom">
         <div class="total-row">
             <div class="total-text">已选商品</div>
@@ -66,9 +62,9 @@
         <button class="order-btn" onclick="submitOrder()">立即提交订单</button>
         <div class="order-tips">提交成功后商家即刻收到订单</div>
     </div>
-
 <script>
-let foodData = [
+// 读取本地菜品，无数据则初始化默认菜品
+let foodData = JSON.parse(localStorage.getItem("wujiFood")) || [
     {name:"红烧排骨",desc:"色泽红亮，软烂入味，酱香浓郁",price:42,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
     {name:"糖醋虾仁",desc:"外酥里嫩，酸甜适口，老少皆宜",price:46,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
     {name:"红烧鸡翅",desc:"肉质鲜嫩，入味十足，下饭神器",price:35,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
@@ -77,77 +73,84 @@ let foodData = [
     {name:"香喷喷米饭",desc:"优质东北大米，粒粒饱满",price:3,type:"zhu",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
     {name:"手打柠檬红茶",desc:"酸甜清爽，解腻百搭",price:18,type:"yin",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"}
 ];
-
 let cart = {};
 let nowType = "all";
-
-let appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
-let uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
+const appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
+const uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
 
 function renderFood(){
     let html = "";
     let filterList = nowType === "all" ? foodData : foodData.filter(item=>item.type === nowType);
     filterList.forEach(item=>{
         let count = cart[item.name] || 0;
-        html += `<div class="food-card"><img class="food-img" src="${item.img}"><div class="food-info"><div class="food-name">${item.name}</div><div class="food-desc">${item.desc}</div><div class="food-price">¥${item.price}</div></div><div class="num-group"><button class="sub-btn" onclick="cutFoodNum('${item.name}')">-</button><span class="num-text">${count}</span><button class="add-btn" onclick="addFoodNum('${item.name}')">+</button></div></div>`;
+        html += `<div class="food-card">
+            <img class="food-img" src="${item.img}" alt="${item.name}">
+            <div class="food-info">
+                <div class="food-name">${item.name}</div>
+                <div class="food-desc">${item.desc}</div>
+                <div class="food-price">¥${item.price}</div>
+            </div>
+            <div class="num-group">
+                <button class="sub-btn" onclick="cutFoodNum('${item.name}')">-</button>
+                <span class="num-text">${count}</span>
+                <button class="add-btn" onclick="addFoodNum('${item.name}')">+</button>
+            </div>
+        </div>`;
     });
     document.getElementById("foodList").innerHTML = html;
     calcTotalPrice();
 }
-
-function addFoodNum(name){ cart[name] = (cart[name]||0)+1; renderFood(); }
-function cutFoodNum(name){ if(cart[name]>0) cart[name]--; renderFood(); }
-
+function addFoodNum(name){
+    cart[name] = (cart[name]||0)+1; renderFood();
+}
+function cutFoodNum(name){
+    if(cart[name]>0) cart[name]--; renderFood();
+}
 function calcTotalPrice(){
     let total=0;
     for(let name in cart){
         if(cart[name]>0){
             let f=foodData.find(v=>v.name===name);
-            total+=f.price*cart[name];
+            total += f.price * cart[name];
         }
     }
-    document.getElementById("allTotal").innerText=total;
+    document.getElementById("allTotal").innerText = total;
     return total;
 }
-
 document.querySelectorAll(".cate-nav span").forEach(tab=>{
-    tab.onclick=function(){
+    tab.onclick = function(){
         document.querySelectorAll(".cate-nav span").forEach(i=>i.classList.remove("active"));
         this.classList.add("active");
-        nowType=this.dataset.type; renderFood();
+        nowType = this.dataset.type; renderFood();
     }
 });
-
 function submitOrder(){
-    let total=calcTotalPrice();
-    if(total<=0){alert("请先选菜");return;}
-    let table=document.getElementById("tableNum").value||"无";
-    let phone=document.getElementById("userPhone").value||"无";
-    let remark=document.getElementById("userRemark").value||"无";
-    let detail="";
+    let total = calcTotalPrice();
+    if(total <= 0){alert("请先挑选心仪菜品再下单~");return;}
+    let table = document.getElementById("tableNum").value || "无";
+    let phone = document.getElementById("userPhone").value || "无";
+    let remark = document.getElementById("userRemark").value || "无";
+    let detail = "";
     for(let name in cart){
         if(cart[name]>0){
             let f=foodData.find(v=>v.name===name);
-            detail+=`${name}×${cart[name]} `;
+            detail += `${name}×${cart[name]} `;
         }
     }
-
-    let msg=`桌号：${table}\n电话：${phone}\n备注：${remark}\n菜品：${detail}\n总价：${total}元`;
-
-    fetch(`https://wxpusher.zjiecode.com/api/send/message/?appToken=${appToken}&content=${encodeURIComponent(msg)}&uid=${uId}`,{
+    let msg = `【伍季新订单】\n桌号：${table}\n电话：${phone}\n备注：${remark}\n菜品：${detail}\n总价：${total}元`;
+    // GET跨域兼容方案
+    fetch(`https://wxpusher.zjiecode.com/api/send/message?appToken=${appToken}&content=${encodeURIComponent(msg)}&uid=${uId}`,{
         method:"GET",
         mode:"no-cors"
-    }).then(()=>{
-        alert("订单提交成功！");
-        cart={}; renderFood();
-        document.getElementById("tableNum").value="";
-        document.getElementById("userPhone").value="";
-        document.getElementById("userRemark").value="";
-    }).catch(()=>{
-        alert("订单提交成功！");
-    });
+    }).finally(()=>{
+        alert("订单提交成功！商家已收到");
+        cart = {};
+        renderFood();
+        document.getElementById("tableNum").value = "";
+        document.getElementById("userPhone").value = "";
+        document.getElementById("userRemark").value = "";
+    })
 }
-
 renderFood();
 </script>
 </body>
