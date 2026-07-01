@@ -63,20 +63,18 @@
         <div class="order-tips">提交成功后商家即刻收到订单</div>
     </div>
 <script>
-// 读取本地菜品，无数据则初始化默认菜品
-let foodData = JSON.parse(localStorage.getItem("wujiFood")) || [
-    {name:"红烧排骨",desc:"色泽红亮，软烂入味，酱香浓郁",price:42,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
-    {name:"糖醋虾仁",desc:"外酥里嫩，酸甜适口，老少皆宜",price:46,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
-    {name:"红烧鸡翅",desc:"肉质鲜嫩，入味十足，下饭神器",price:35,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
-    {name:"蚝油生菜",desc:"清爽解腻，鲜香可口，低脂健康",price:16,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
-    {name:"西红柿炖牛腩",desc:"汤汁浓郁，牛腩软烂，酸甜开胃",price:52,type:"hot",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
-    {name:"香喷喷米饭",desc:"优质东北大米，粒粒饱满",price:3,type:"zhu",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"},
-    {name:"手打柠檬红茶",desc:"酸甜清爽，解腻百搭",price:18,type:"yin",img:"https://pic.5tu.cn/photo/202503/58967_202503051425272921.jpg"}
-];
+let foodData = [];
 let cart = {};
 let nowType = "all";
 const appToken = "AT_xLUfNE66W3XjqSMr4ntBC8980uZ0IAzj";
 const uId = "UID_wjCIqe4QOUqfsSsvXGFtnJnY42et";
+
+// 每次打开页面从云端JSON拉取菜品，所有设备同步
+async function loadCloudFood(){
+    const res = await fetch("./food.json");
+    foodData = await res.json();
+    renderFood();
+}
 
 function renderFood(){
     let html = "";
@@ -138,7 +136,6 @@ function submitOrder(){
         }
     }
     let msg = `【伍季新订单】\n桌号：${table}\n电话：${phone}\n备注：${remark}\n菜品：${detail}\n总价：${total}元`;
-    // GET跨域兼容方案
     fetch(`https://wxpusher.zjiecode.com/api/send/message?appToken=${appToken}&content=${encodeURIComponent(msg)}&uid=${uId}`,{
         method:"GET",
         mode:"no-cors"
@@ -151,7 +148,7 @@ function submitOrder(){
         document.getElementById("userRemark").value = "";
     })
 }
-renderFood();
+loadCloudFood();
 </script>
 </body>
 </html>
